@@ -83,6 +83,7 @@ according to the following rules:
 import logging
 import os
 import re
+import pandas as pd
 from zipfile import ZipFile
 
 import yaml
@@ -489,6 +490,9 @@ def get_best_bundles_by_category(
         and config_bundles[bname].get("tutorial", False) == tutorial
         and _check_disabled_by_opt(config_bundles[bname], config_enable) != ["all"]
     }
+    print(dict_n_matched)
+    df_matched = pd.DataFrame(columns=["bundle_size", "n_matches", "matched_countries"])
+
 
     returned_bundles = []
 
