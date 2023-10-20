@@ -87,6 +87,7 @@ import re
 import pandas as pd
 import json
 import csv
+import requests
 from zipfile import ZipFile
 
 import yaml
@@ -149,6 +150,7 @@ def download_and_unzip_zenodo(config, rootpath, hot_run=True, disable_progress=F
     if hot_run:
         try:
             logger.info(f"Downloading resource '{resource}' from cloud '{url}'")
+            print("zenodo url: ", url)
             progress_retrieve(url, file_path, disable_progress=disable_progress)
             logger.info(f"Extracting resources")
             with ZipFile(file_path, "r") as zipObj:
@@ -190,10 +192,12 @@ def download_and_unzip_gdrive(config, rootpath, hot_run=True, disable_progress=F
     file_path = os.path.join(rootpath, "tempfile.zip")
 
     url = config["urls"]["gdrive"]
-
+    print("url :", url)
     # retrieve file_id from path
     # cut the part before the ending \view
     partition_view = re.split(r"/view|\\view", str(url), 1)
+    print("partition view: ", partition_view)
+    print("partition view type: ", partition_view[0])
     if len(partition_view) < 2:
         logger.error(
             f'Resource {resource} cannot be downloaded: "\\view" not found in url {url}'
@@ -211,7 +215,8 @@ def download_and_unzip_gdrive(config, rootpath, hot_run=True, disable_progress=F
 
     # get file id
     file_id = code_split[-1]
-
+    print("code split: ", code_split)
+    print("file_id :", file_id)
     # if hot run enabled
     if hot_run:
         # remove file
@@ -493,34 +498,43 @@ def get_best_bundles_by_category(
         and config_bundles[bname].get("tutorial", False) == tutorial
         and _check_disabled_by_opt(config_bundles[bname], config_enable) != ["all"]
     }
+
     print("dict_n_matched", dict_n_matched)
     #YUKARIDAKİ SÖZLÜKTEKİ DÖNGÜ SAYESİNDE FARKLI KATEGORİLERE AİT KAÇ BUNDLE VAR O BULUNUYOR. 
     df_matched = pd.DataFrame(columns=["bundle_size", "n_matches", "matched_countries"])
     #df_matched = df_matched.append({'n_matches': 23}, ignore_index = True)
-    df_initial = pd.DataFrame.from_dict(config_bundles).transpose()
+    #df_initial = pd.DataFrame.from_dict(config_bundles).transpose()
     #print(df_initial)
     #print("matched countries: ", df_initial["matched_countries"])
-    df_initial = df_initial[["n_matched", "matched_countries"]]
+    #df_initial = df_initial[["n_matched", "matched_countries"]]
 
     #eğer n_matched'in toplam countries sayısına eşit olan satırları tut diğer satırları sil.
     print("countries: ", type(len(country_list)))
 
     #len(country_list) == 
-    print("kolon veri tipi: ", df_initial)
 
-    print("df initial: \n", df_initial)
     for bname in config_bundles:
         if config_bundles[bname]["category"] == category and config_bundles[bname].get("tutorial", False) == tutorial and _check_disabled_by_opt(config_bundles[bname], config_enable) != ["all"]:
             #df_matched = df_matched.append({'n_matches': config_bundles[bname]["n_matched"]}, ignore_index = True) 
             #print("df_matched: ", df_matched)
             print("hello")
-            df_initial = pd.DataFrame.from_dict(config_bundles)
             #df_initial.loc["bundle_cutouts_westernasia"]
             #print("drr :", df_initial.loc["n_matched"]["bundle_landcover_westasia"])
             #print(df_initial)
-            
-    #if config_bundles[bname]["category"] == category:
-    #print("config bundles category: ", bname)
+
+            df_initial = pd.DataFrame.from_dict(config_bundles)
+            df_initial = pd.DataFrame.from_dict(config_bundles).transpose()
+            df_initial = df_initial[["n_matched", "matched_countries", "urls"]]
+            #print("kolon veri tipi: ", df_initial)
+            #print("config bundles are: ", config_bundles)
+            #print("config bundles kolon isimleri: ", pd.DataFrame.from_dict(config_bundles).transpose().columns)
+            print("df initial: \n", df_initial)
+            #Eşleşen veri setini ayıklamam gerekiyor.
+            #returned bundles'ta dönmesi lazım
+            #returned bundles aşağıda olduğuna göre bu işlemi orada yapmalıyım.
+            #requests.head()
+        
+            #partition_view = re.split(r"/view|\\view", str(url), 1)
 
     returned_bundles = []
 
@@ -706,7 +720,7 @@ if __name__ == "__main__":
     # download the selected bundles
     for b_name in bundles_to_download:
         host_list = config_bundles[b_name]["urls"]
-
+        print("selected urls are: ", host_list)
         downloaded_bundle = False
 
         # loop all hosts until data is successfully downloaded
@@ -715,6 +729,7 @@ if __name__ == "__main__":
 
             try:
                 download_and_unzip = globals()[f"download_and_unzip_{host}"]
+                print("selected urls are: ", host_list)
                 if download_and_unzip(
                     config_bundles[b_name], rootpath, disable_progress=disable_progress
                 ):
