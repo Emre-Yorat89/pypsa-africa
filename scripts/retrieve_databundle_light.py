@@ -80,10 +80,13 @@ according to the following rules:
 - ``cutouts``: input data unzipped into the cutouts folder
 
 """
+import urllib
 import logging
 import os
 import re
 import pandas as pd
+import json
+import csv
 from zipfile import ZipFile
 
 import yaml
@@ -490,18 +493,44 @@ def get_best_bundles_by_category(
         and config_bundles[bname].get("tutorial", False) == tutorial
         and _check_disabled_by_opt(config_bundles[bname], config_enable) != ["all"]
     }
-    print(dict_n_matched)
+    print("dict_n_matched", dict_n_matched)
+    #YUKARIDAKİ SÖZLÜKTEKİ DÖNGÜ SAYESİNDE FARKLI KATEGORİLERE AİT KAÇ BUNDLE VAR O BULUNUYOR. 
     df_matched = pd.DataFrame(columns=["bundle_size", "n_matches", "matched_countries"])
+    #df_matched = df_matched.append({'n_matches': 23}, ignore_index = True)
+    df_initial = pd.DataFrame.from_dict(config_bundles).transpose()
+    #print(df_initial)
+    #print("matched countries: ", df_initial["matched_countries"])
+    df_initial = df_initial[["n_matched", "matched_countries"]]
 
+    #eğer n_matched'in toplam countries sayısına eşit olan satırları tut diğer satırları sil.
+    print("countries: ", type(len(country_list)))
+
+    #len(country_list) == 
+    print("kolon veri tipi: ", df_initial)
+
+    print("df initial: \n", df_initial)
+    for bname in config_bundles:
+        if config_bundles[bname]["category"] == category and config_bundles[bname].get("tutorial", False) == tutorial and _check_disabled_by_opt(config_bundles[bname], config_enable) != ["all"]:
+            #df_matched = df_matched.append({'n_matches': config_bundles[bname]["n_matched"]}, ignore_index = True) 
+            #print("df_matched: ", df_matched)
+            print("hello")
+            df_initial = pd.DataFrame.from_dict(config_bundles)
+            #df_initial.loc["bundle_cutouts_westernasia"]
+            #print("drr :", df_initial.loc["n_matched"]["bundle_landcover_westasia"])
+            #print(df_initial)
+            
+    #if config_bundles[bname]["category"] == category:
+    #print("config bundles category: ", bname)
 
     returned_bundles = []
+
 
     # check if non-empty dictionary
     if dict_n_matched:
         # if non-empty, then pick bundles until all countries are selected
         # or no more bundles are found
         dict_sort = sorted(dict_n_matched.items(), key=lambda d: d[1])
-
+        #print("dict_sort: ", dict_sort)
         current_matched_countries = []
         remaining_countries = set(country_list)
 
@@ -518,7 +547,8 @@ def get_best_bundles_by_category(
                 remaining_countries = remaining_countries.difference(intersect)
 
                 returned_bundles.append(bname)
-
+    print("returned bundles are: ", returned_bundles)
+    print("df_matched: ", df_matched)
     return returned_bundles
 
 
@@ -561,13 +591,24 @@ def get_best_bundles(countries, config_bundles, tutorial, config_enable):
         set([config_bundles[conf]["category"] for conf in config_bundles])
     )
 
+    print("konfig bandıl: ", config_bundles["bundle_tutorial_NGBJ"]["category"])
+
+    print("kategori: ", [config_bundles[conf]["category"] for conf in config_bundles])
+    print(len([config_bundles[conf]["category"] for conf in config_bundles]))
+
     # identify matched countries for every bundle
     for bname in config_bundles:
+        print(bname)
         config_bundles[bname]["matched_countries"] = [
             c for c in config_bundles[bname]["countries"] if c in countries
         ]
         n_matched = len(config_bundles[bname]["matched_countries"])
         config_bundles[bname]["n_matched"] = n_matched
+
+
+    
+
+
 
     # bundles to download
     bundles_to_download = []
@@ -576,7 +617,6 @@ def get_best_bundles(countries, config_bundles, tutorial, config_enable):
         selection_bundles = get_best_bundles_by_category(
             countries, cat, config_bundles, tutorial, config_enable
         )
-
         # check if non-empty dictionary
         if selection_bundles:
             bundles_to_download.extend(selection_bundles)
@@ -586,7 +626,6 @@ def get_best_bundles(countries, config_bundles, tutorial, config_enable):
                     f"Multiple bundle data for category {cat}: "
                     + ", ".join(selection_bundles)
                 )
-
     return bundles_to_download
 
 
@@ -635,6 +674,10 @@ if __name__ == "__main__":
     rootpath = os.getcwd()
     tutorial = snakemake.params.tutorial
     countries = snakemake.params.countries
+
+    print("veri tipi: ", type(countries))
+    print("countries: ", type(len(countries)))
+
     logger.info(f"Retrieving data for {len(countries)} countries.")
 
     disable_progress = not snakemake.config.get("retrieve_databundle", {}).get(
